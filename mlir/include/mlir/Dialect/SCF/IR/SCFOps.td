@@ -1062,7 +1062,11 @@ def WhileOp : SCF_Op<"while",
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
       "function_ref<void(OpBuilder &, Location, ValueRange)>":$beforeBuilder,
-      "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>,
+    // Below builder can infer return types from beforeBlock's ConditionOp
+    OpBuilder<(ins "ValueRange":$operands,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$beforeBuilder,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>,
   ];
 
   let extraClassDeclaration = [{

@@ -3106,6 +3106,42 @@ void WhileOp::build(::mlir::OpBuilder &odsBuilder,
     afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
 }
 
+void WhileOp::build(::mlir::OpBuilder &odsBuilder,
+                    ::mlir::OperationState &odsState,
+                    ValueRange operands, BodyBuilderFn beforeBuilder,
+                    BodyBuilderFn afterBuilder) {
+  odsState.addOperands(operands);
+
+  OpBuilder::InsertionGuard guard(odsBuilder);
+
+  // Build before region.
+  SmallVector<Location, 4> beforeArgLocs;
+  beforeArgLocs.reserve(operands.size());
+  for (Value operand : operands) {
+    beforeArgLocs.push_back(operand.getLoc());
+  }
+
+  Region *beforeRegion = odsState.addRegion();
+  Block *beforeBlock = odsBuilder.createBlock(
+      beforeRegion, /*insertPt=*/{}, operands.getTypes(), beforeArgLocs);
+  if (beforeBuilder)
+    beforeBuilder(odsBuilder, odsState.location, beforeBlock->getArguments());
+
+  // Infer result types.
+  TypeRange resultTypes = beforeBlock->getTerminator()->getResultTypes();
+  odsState.addTypes(resultTypes);
+
+  // Build after region.
+  SmallVector<Location, 4> afterArgLocs(resultTypes.size(), odsState.location);
+
+  Region *afterRegion = odsState.addRegion();
+  Block *afterBlock = odsBuilder.createBlock(afterRegion, /*insertPt=*/{},
+                                             resultTypes, afterArgLocs);
+
+  if (afterBuilder)
+    afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
+}
+
 ConditionOp WhileOp::getConditionOp() {
   return cast<ConditionOp>(getBeforeBody()->getTerminator());
 }
